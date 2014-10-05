@@ -13,14 +13,16 @@ $username = 'root';
 $passwd = '';
 
 try {
-    simpleTagsModel::initDb(new PDO($dsn, $username, $passwd) ); 
+    $pdo = new PDO($dsn, $username, $passwd);
+    $tagsModel = new simpleTagsModel( $pdo );
+    $tagsModel->addTag('Test112345');
+    $tagsModel->rmTag(7);
+    $tagsModel->rmTag(8);
+    $tagsModel->rmTag(9);
+    $tagsModel->rmTag(10);
+    $tagsModel->rmTag(11);
    
-    try {    
-        $tagsModel = new simpleTagsModel($dsn, $username, $passwd);
-        $tagsModel->addTag('Test1');
-    } catch (PDOException  $e) {
-        echo 'Connection failed: ' . $e->getMessage();
-    }
+    
    
 } catch (PDOException $e) {
     echo 'Connection failed: ' . $e->getMessage();
