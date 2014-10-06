@@ -80,3 +80,44 @@ class Db {
         mysqli_query( $this->dbConnection ,"SET NAMES '{$locale}'");        
     }
 }
+
+
+
+class dbc {
+    static private $instance = null;
+    static private $dbInstance = null;
+    
+    static $host = null;
+    static $user = null;
+    static $password = null;
+    static $database = null;
+    static $port = null;
+    static $socket = null;
+    
+    const LOCALE_CP_1251 = 'cp1251';
+    const LOCALE_UTF_8   = 'utf8';
+    
+    static function getInstance(){
+        return (self::$instance) ? self::$instance : new dbc();
+    }
+    static function getDbInstance(){
+        self::getInstance();
+        return (self::$dbInstance) ? self::$dbInstance : new mysqli(self::$host, self::$user, self::$password, self::$database, self::$port, self::$socket);
+    }
+    
+    public function query($sql,$params){}
+    
+    public function quoteIdent($field) {
+        return "`".str_replace("`","``",$field)."`";
+    }
+    
+    public function toString(string $str) {        
+        $str = str_replace("'","/'",$str);
+        return $str;
+    }
+    
+    public function toInt($int){
+        
+    }
+    
+}
