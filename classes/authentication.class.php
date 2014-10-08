@@ -14,7 +14,7 @@
 abstract class Authentication {
     
     abstract function authenticate( $login, $passwd );
-    
+        
 }
 
 class BaseAuthentication extends Authentication {
@@ -36,7 +36,7 @@ class BaseAuthentication extends Authentication {
                 $this->setSessionsUid ( $uid );                    
             }else{
                 throw new Exception('UID не найден!');
-            }                  
+            }
             
             return $result;
             
