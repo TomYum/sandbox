@@ -15,7 +15,7 @@ class User {
     
     static protected  $instance = null;
     
-    private $uid    = -1;
+    private $uid    = 0;
     private $login  = null;
     private $passwd = null;
     private $name = null;
@@ -26,7 +26,8 @@ class User {
     
         
     static function getInstance(){
-        return (self::$instance) ?  self::$instance : new User();
+        if ( !is_a( self::$instance, 'User') ) self::$instance = new User();
+        return self::$instance;
     }
     
     function __construct() {        
@@ -38,7 +39,7 @@ class User {
     function __set( $name, $value ) {}
     
     public function isAnonymous(){
-        return ( $this->uid != -1 ) ? false : true;            
+        return ( $this->uid > 0 ) ? false : true;            
     }
     /**
      * Авторизиция пользователя
