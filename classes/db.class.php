@@ -12,112 +12,88 @@
  * @author Tom.Yum.
  */
 class Db {
-       /**
+     /**
      *
      * @var db Ссылка на объект класса 
      */
     static private $instance = null;
     
-    
-    static $host = null;
-    static $user = null;
-    static $password = null;
-    static $database = null;
-    static $port = null;
-    static $socket = null;
+    private $dbInstances = array();
+    private $dbConfig = array();
     
     const LOCALE_CP_1251 = 'cp1251';
     const LOCALE_UTF_8   = 'utf8';
     
-    private $dbConnection = null;
+    
     /**
      * 
      * @return Db
      */
     static function getInstance(){
-        return (self::$instance) ? self::$instance : new Db();
-    }
-    
-        
-    function __construct() {
-        try {
-            
-            if ( !self::$database ) throw new Exception ( 'Не задана bd');
-            if ( !self::$user ) throw new Exception ( 'Не задан пользователь бд');
-            if ( !self::$host ) throw new Exception ( 'Не задан хост');
-            if ( !self::$password == null ) throw new Exception ( 'Не задан пароль');            
-            
-	 	
-                
-            $this->dbConnection =  mysqli_connect( self::$host, 
-                                                   self::$user, 
-                                                   self::$password, 
-                                                   self::$database, 
-                                                   self::$port );
-            
-            if ( isset( $this->dbConnection ) and !empty( $this->dbConnection ) ) {
-                self::$instance = $this;                
-            } else {
-                throw new Exception('Не удалось подключиться к БД!');
-            }
-            
-        } catch ( Exception $ex ) {
-            echo $ex->getMessage();
-            die();
+        if ( !is_a( self::$instance, 'Db' ) ) {
+            self::$instance = new Db();
         }
-        
-    }
-   /**
-    * 
-    * @return mysqli
-    */
-    public function getDbConnection( $locale = 'cp1251' ){
-        $this->setLocale( $locale );
-        return $this->dbConnection;
+        return self::$instance;
     }
     
-    public function setLocale( $locale = 'cp1251' ){
-        mysqli_query( $this->dbConnection ,"SET NAMES '{$locale}'");        
+    /**
+     * Возвращает указатель на объект MySQLi
+     * @param string $dbname
+     * @return mysqli
+     * @throws dbException
+     */
+    public function getDbInstance( $dbname ) {
+       
+        if (  is_a( $this->dbInstances[ $dbname ], 'mysqli' )){
+            return $this->dbInstances[ $dbname ];
+        }else{                       
+            if( isset($this->dbConfig[ $dbname ]) ) {                      
+                $this->dbInstances[ $dbname ] = new mysqli(
+                                                    $this->dbConfig[ $dbname ]['host'], 
+                                                    $this->dbConfig[ $dbname ]['user'], 
+                                                    $this->dbConfig[ $dbname ]['passwd'], 
+                                                    $dbname, 
+                                                    $this->dbConfig[ $dbname ]['port'], 
+                                                    $this->dbConfig[ $dbname ]['socket']
+                                                );/**/
+                                               
+                return $this->dbInstances[ $dbname ];
+            }else{
+                throw new dbException('Не получилось подключиться к БД. Не заданы настройки подключения!');            
+            }        
+        }
+    }
+    
+    public function setDbConfig($database, $host, $user, $password = '', $port = null, $socket = null ){
+        
+        $this->dbConfig[$database] = array(
+            'host'      => $host,
+            'user'      => $user,
+            'passwd'    => $password,
+            'port'      => $port,
+            'socket'    => $socket
+        );        
+        
+    }
+    
+    public function setLocale( $dbName, $locale = 'cp1251' ){
+        $dbi = $this->getDbInstance($dbName);
+        $dbi->query("SET NAMES '{$locale}'");        
+    }
+    
+    function __get( $name ) {}
+    function __set( $name, $value ) {
+        throw new Exception("Fuck off! а не $name = $value!");
     }
 }
 
 
 
-class dbc {
-    static private $instance = null;
-    static private $dbInstance = null;
-    
-    static $host = null;
-    static $user = null;
-    static $password = null;
-    static $database = null;
-    static $port = null;
-    static $socket = null;
-    
-    const LOCALE_CP_1251 = 'cp1251';
-    const LOCALE_UTF_8   = 'utf8';
-    
-    static function getInstance(){
-        return (self::$instance) ? self::$instance : new dbc();
-    }
-    static function getDbInstance(){
-        self::getInstance();
-        return (self::$dbInstance) ? self::$dbInstance : new mysqli(self::$host, self::$user, self::$password, self::$database, self::$port, self::$socket);
-    }
-    
-    public function query($sql,$params){}
-    
-    public function quoteIdent($field) {
-        return "`".str_replace("`","``",$field)."`";
-    }
-    
-    public function toString(string $str) {        
-        $str = str_replace("'","/'",$str);
-        return $str;
-    }
-    
-    public function toInt($int){
-        
-    }
-    
+/**
+ * Обработчик исключений
+ */
+class dbException extends Exception{
+   
 }
+
+
