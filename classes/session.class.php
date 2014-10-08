@@ -16,31 +16,44 @@ define('SESSION_EXP_TIME', '10368000');
 define('SESSION_COKIE_URI', '.basicdecor.ru');
 
 
+
 /**
  * 
  */
 class Session {
+    
+    static private $_SESSION_DB_NAME;
+    
     static private $instance = null;
-            
+    
+    
     private $sid = null;
-    private $seesionRaw = null;
-    private $uid = null;
-    private $firstVisit = null;
-    private $lastVisit = null;
-    private $visitDelta = null;
-    private $visitCount = 0;
-    private $ip = null;
-    private $browserUserAgent = null;
-    private $cityReal = null;
-    private $cityGet = null;
+    
+    public $uid = null;
+    public $firstVisit = null;
+    public $lastVisit = null;
+    public $visitDelta = null;
+    public $visitCount = 0;
+    public $ip = null;
+    public $browserUserAgent = null;
+    public $cityReal = null;
+    public $cityGet = null;
+    
     
     /**
      * 
-     * @return Session
+     * @return Session 
      */    
-    static function getInstance(){
-        return (self::$instance) ? self::$instance : new Session();
+    static function getInstance(){        
+        if ( !is_a(self::$instance,'Session' ) ) self::$instance =  new Session();
+        return self::$instance;
     }    
+    
+    static function setDbName( $dbName ){
+        if (self::$_SESSION_DB_NAME) throw new Exception ( 'БД уже заданна' );
+        self::$_SESSION_DB_NAME = $dbName;
+    }
+    
     function __construct(){
         
         if (!isset($_COOKIE['SID_ID_LOCAL'])){
@@ -52,8 +65,8 @@ class Session {
             session_start();
             $this->loadSession();
             
-            $this->visitCount++;
-            $this->lastVisit = time();
+            
+            $this->lastVisit = time();            
             
             $this->updateSession();            
         }       
@@ -65,21 +78,22 @@ class Session {
     
       
     private function loadSession ( $sid = null ){
-        $db = Db::getInstance()->getDbConnection( Db::LOCALE_UTF_8 );
+        $db = Db::getInstance();
+        $dbc = $db->getDbInstance( self::$_SESSION_DB_NAME );
+        
         if ( $sid ){
-            $this->sid = $db->real_escape_string($sid);
+            $this->sid = $dbc->real_escape_string($sid);
         }        
         $sql = "SELECT * FROM `sessions` WHERE `s_id` LIKE '{$this->sid}'";        
         
-        $query = $db->query($sql);
+        $query = $dbc->query($sql);
         $result = $query->fetch_array();
-        $this->seesionRaw = $result;
-        
+                
         $this->uid = $result['s_u_id'];
         $this->firstVisit = $result['s_dt_visit_first'];
         $this->lastVisit = $result['s_dt_visit_last'];
-        $this->visitDelta = $result['s_dt_visit_delta'];
-        $this->visitCount = $result['s_visit_count'];
+        $this->visitDelta = time() - $result['s_dt_visit_last'];
+        $this->visitCount = ++$result['s_visit_count'] ;
         $this->ip = $result['s_ip'];
         $this->browserUserAgent = $result['s_user_agent'];
         $this->cityReal = $result['s_city_real'];
@@ -88,7 +102,8 @@ class Session {
     
     private function createSession(){
         
-        $dbConnection = Db::getInstance()->getDbConnection( db::LOCALE_UTF_8 );
+        $db = Db::getInstance();
+        $dbc = $db->getDbInstance( self::$_SESSION_DB_NAME );
         
         session_start();
         $this->sid = session_id();
@@ -96,7 +111,7 @@ class Session {
         
         $currentTime = time();
         $this->uid = -1;
-        $this->browserUserAgent = $dbConnection->real_escape_string( $_SERVER['HTTP_USER_AGENT'] );
+        $this->browserUserAgent = $dbc->real_escape_string( $_SERVER['HTTP_USER_AGENT'] );
         $this->ip = $_SERVER["REMOTE_ADDR"];
         $this->lastVisit = $currentTime;
         $this->firstVisit = $currentTime;
@@ -131,11 +146,12 @@ class Session {
                      {$this->cityGet}
                 )";
         
-        return $dbConnection->query($sql);        
+        return $dbc->query($sql);        
     }
     
     private function updateSession ( $sid = null ){
-        $dbConnection = Db::getInstance()->getDbConnection( db::LOCALE_UTF_8 );
+        $db = Db::getInstance();
+        $dbc = $db->getDbInstance( self::$_SESSION_DB_NAME );
         
         $sql = "UPDATE `sessions` SET
                     `s_u_id` = {$this->uid},
@@ -150,15 +166,18 @@ class Session {
                     `s_id` LIKE '{$this->sid}'
                 ";
                     
-         $dbConnection->query($sql);           
+         $dbc->query($sql);           
     }
    
     
     
     public function clean(){
+        $db = Db::getInstance();
+        $dbc = $db->getDbInstance( self::$_SESSION_DB_NAME );
+        
         $expTime = time() - SESSION_EXP_TIME;
         $sql = "DELETE FROM `sessions` WHERE `s_dt_visit_last` < {$expTime}";        
-        return Db::getInstance()->getDbConnection()->query($sql);
+        return $dbc->query($sql);
     }
             
     
